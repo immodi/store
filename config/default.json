@@ -14,7 +14,7 @@
         "headTags": {
             "scripts": [
                 {
-                    "src": "/scripts/changeFeaturedText.js",
+                    "src": "/scripts/home.js",
                     "async": true
                 }
             ],
@@ -25,7 +25,7 @@
                 }
             ]
         },
-        "copyRight": "© 2025 Evershop. All Rights Reserved."
+        "copyRight": "© 2025 Sahl Stor. All Rights Reserved."
     },
     "system": {
         "extensions": []
