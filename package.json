@@ -1,16 +1,18 @@
 {
-  "name": "store",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "setup": "evershop install",
-    "start": "evershop start",
-    "build": "evershop build",
-    "dev": "evershop dev"
-  },
-  "dependencies": {
-    "@evershop/evershop": "1.2.2",
-    "@paypal/react-paypal-js": "^8.8.1",
-    "dotenv": "^16.4.7"
-  }
+    "name": "store",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "setup": "evershop install",
+        "start": "evershop start",
+        "build": "evershop build",
+        "dev": "evershop dev",
+        "user:create": "evershop user:create",
+        "user:changePassword": "evershop user:changePassword"
+    },
+    "dependencies": {
+        "@evershop/evershop": "1.2.2",
+        "@paypal/react-paypal-js": "^8.8.1",
+        "dotenv": "^16.4.7"
+    }
 }
