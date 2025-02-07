@@ -1,24 +1,53 @@
-try {
-    const textSelect = document.evaluate(
-        "//h3[contains(., 'Featured Products')]",
-        document,
-        null,
-        XPathResult.ANY_TYPE,
-        null
-    );
-    const textNode = textSelect.iterateNext();
+async function getUserCurrency() {
+    try {
+        // Step 1: Get the user's country code using ipapi.co
+        const locationResponse = await fetch("https://api.country.is/");
+        if (!locationResponse.ok) throw new Error("Failed to fetch location");
 
-    textNode.style.fontSize = "3rem";
-    textNode.style.textAlign = "left";
-} catch (error) {}
-//
+        const locationData = await locationResponse.json();
+        const countryCode = locationData.country; // Example: "US"
 
-try {
-    const navBarContainer = document.querySelector(".nav-bar");
-    navBarContainer.style.top = "0.5rem";
-} catch (error) {}
+        // Step 2: Fetch currency code for the country from restcountries.com
+        const countryResponse = await fetch(
+            `https://restcountries.com/v3.1/alpha/${countryCode}`
+        );
+        if (!countryResponse.ok)
+            throw new Error("Failed to fetch country details");
 
-//
+        const countryData = await countryResponse.json();
+        const currencyCode = Object.keys(countryData[0].currencies)[0]; // Example: "USD"
+
+        return currencyCode || "USD"; // Return currency or default to USD
+    } catch (error) {
+        console.error("Error fetching user currency:", error);
+        return "USD"; // Fallback currency
+    }
+}
+
+async function convertUSD(amountUSD, targetCurrency) {
+    try {
+        const response = await fetch(
+            `https://hexarate.paikama.co/api/rates/latest/USD?target=${targetCurrency}`
+        );
+
+        if (!response.ok) {
+            return amountUSD;
+        }
+
+        const data = await response.json();
+
+        const rate = data.data.mid; // conversion rate: 1 SAR = rate USD
+        const newAmount = amountUSD * rate;
+        return newAmount.toFixed(2);
+    } catch (error) {
+        return amountUSD;
+    }
+}
+
+function extractNumber(text) {
+    const number = text.match(/[\d.]+/g)?.join("") || "";
+    return number;
+}
 
 function translateAppToArabic() {
     // Create a hidden container for the Google Translate widget
@@ -59,10 +88,12 @@ function translateAppToArabic() {
     // Handle dynamic content changes
     const observer = new MutationObserver(() => {
         if (window.google && window.google.translate) {
-            google.translate.TranslateElement.Instance().translatePage(
-                "auto",
-                "ar"
-            );
+            try {
+                google.translate.TranslateElement.Instance().translatePage(
+                    "auto",
+                    "ar"
+                );
+            } catch (e) {}
         }
     });
 
@@ -73,67 +104,147 @@ function translateAppToArabic() {
     });
 }
 
-try {
-    translateAppToArabic();
-} catch (error) {}
-
-//
 function updatePrices() {
     // Select all product price listings
-    const priceNodes = document.querySelectorAll(".product-price-listing");
+    const priceNodes = document.querySelectorAll(".sale-price");
 
-    priceNodes.forEach((node) => {
-        // Extract original price
-        const priceElement = node.querySelector(".sale-price");
-        const originalText = priceElement.innerText;
-        const originalPrice = parseFloat(originalText.replace(/[^0-9.]/g, ""));
+    setTimeout(() => {
+        priceNodes.forEach((node) => {
+            // Extract original price
+            const originalText = node.innerText;
+            const originalPrice = parseFloat(
+                originalText.replace(/[^0-9.]/g, "")
+            );
 
-        // Calculate new price
-        const newPrice = (originalPrice * 1.15).toFixed(2);
+            // Calculate new price
+            const newPrice = (originalPrice * 1.15).toFixed(2);
+            // Create new HTML with strikethrough
+            node.innerHTML = `
+                <span style="text-decoration: line-through">${newPrice}</span>
+                -
+                ${originalText}`;
+        });
+    }, 1500);
+}
 
-        // Create new HTML with strikethrough
-        priceElement.innerHTML = `
-            <span style="text-decoration: line-through">${newPrice}</span>
-            - 
-            ${originalText} ريال سعودي
-        `;
+function addSaleCaption() {
+    window.addEventListener("DOMContentLoaded", () => {
+        const images = document.querySelectorAll(
+            ".product-thumbnail-listing img"
+        );
+
+        console.log(images);
+
+        images.forEach(function (img) {
+            // Create a container <div> with relative positioning and inline-block display
+            const container = document.createElement("div");
+            container.style.position = "relative";
+            container.style.display = "inline-block";
+
+            // Insert the container before the image in the DOM
+            img.parentNode.insertBefore(container, img);
+            // Move the image inside the container
+            container.appendChild(img);
+
+            // Create the <span> for the sale label
+            const saleLabel = document.createElement("span");
+            saleLabel.textContent = "خصم";
+            // Style the label: absolute position at the bottom left, with a black background and white text
+            saleLabel.style.position = "absolute";
+            saleLabel.style.bottom = "0";
+            saleLabel.style.left = "0";
+            saleLabel.style.backgroundColor = "black";
+            saleLabel.style.color = "white";
+            saleLabel.style.fontSize = "12px";
+            saleLabel.style.padding = "2px 4px";
+
+            // Append the sale label to the container
+            container.appendChild(saleLabel);
+        });
     });
 }
 
-// Run the function when the page loads
-window.addEventListener("DOMContentLoaded", updatePrices);
+function removeTheGoogleTranslateHeader() {
+    if (window.location.pathname !== "/checkout") {
+        try {
+            setTimeout(() => {
+                new MutationObserver(() => {
+                    const iframe = document.querySelector("iframe");
+                    if (iframe) iframe.style.visibility = "hidden";
+                }).observe(document.body, { childList: true, subtree: true });
+            }, 10);
+        } catch (e) {
+            console.error("Error in removeTheGoogleTranslateHeader:", e);
+        }
+    }
+}
 
-//
+function styleThePage() {
+    try {
+        const textSelect = document.evaluate(
+            "//h3[contains(., 'Featured Products')]",
+            document,
+            null,
+            XPathResult.ANY_TYPE,
+            null
+        );
+        const textNode = textSelect.iterateNext();
 
-window.addEventListener("DOMContentLoaded", () => {
-    const images = document.querySelectorAll(".product-thumbnail-listing img");
+        textNode.style.fontSize = "3rem";
+        textNode.style.textAlign = "left";
+    } catch (error) {}
 
-    console.log(images);
+    try {
+        const navBarContainer = document.querySelector(".nav-bar");
+        navBarContainer.style.top = "0.5rem";
+    } catch (error) {}
+}
 
-    images.forEach(function (img) {
-        // Create a container <div> with relative positioning and inline-block display
-        const container = document.createElement("div");
-        container.style.position = "relative";
-        container.style.display = "inline-block";
+styleThePage();
 
-        // Insert the container before the image in the DOM
-        img.parentNode.insertBefore(container, img);
-        // Move the image inside the container
-        container.appendChild(img);
+try {
+    getUserCurrency()
+        .then((userCurrency) => {
+            // document.querySelectorAll(".sale-price").forEach(async (product) => {
+            //     const productPrice = extractNumber(product.innerHTML);
+            //     product.innerHTML = `${await convertUSD(
+            //         productPrice,
+            //         userCurrency
+            //     )} ${userCurrency}`;
+            // });
 
-        // Create the <span> for the sale label
-        const saleLabel = document.createElement("span");
-        saleLabel.textContent = "خصم";
-        // Style the label: absolute position at the bottom left, with a black background and white text
-        saleLabel.style.position = "absolute";
-        saleLabel.style.bottom = "0";
-        saleLabel.style.left = "0";
-        saleLabel.style.backgroundColor = "black";
-        saleLabel.style.color = "white";
-        saleLabel.style.fontSize = "12px";
-        saleLabel.style.padding = "2px 4px";
+            const allPriceNodes = [...document.querySelectorAll("*")].filter(
+                (node) =>
+                    node.childNodes.length === 1 && // Ensure only one child node
+                    node.childNodes[0].nodeType === Node.TEXT_NODE && // Ensure it's a text node
+                    node.innerText?.includes("$") && // Check if it contains "$"
+                    !node.closest("script") // Ensure it's not inside a <script> tag
+            );
 
-        // Append the sale label to the container
-        container.appendChild(saleLabel);
-    });
-});
+            const alreadySavedPrices = {};
+            for (const priceNode of allPriceNodes) {
+                if (alreadySavedPrices[priceNode.innerHTML] !== undefined) {
+                    priceNode.innerHTML =
+                        alreadySavedPrices[priceNode.innerHTML];
+                    continue;
+                }
+
+                const productPrice = extractNumber(priceNode.innerHTML);
+                convertUSD(productPrice, userCurrency).then((newPrice) => {
+                    const newText = `${newPrice} ${userCurrency}`;
+
+                    alreadySavedPrices[priceNode.innerHTML] = newText;
+                    priceNode.innerHTML = newText;
+                });
+            }
+        })
+        .finally(() => {
+            updatePrices();
+        });
+
+    translateAppToArabic();
+} catch (error) {}
+
+addSaleCaption();
+
+removeTheGoogleTranslateHeader();
