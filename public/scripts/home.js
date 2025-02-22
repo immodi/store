@@ -124,7 +124,7 @@ function updatePrices() {
                 -
                 ${originalText}`;
         });
-    }, 1500);
+    }, 2000);
 }
 
 function addSaleCaption() {
@@ -205,14 +205,6 @@ styleThePage();
 try {
     getUserCurrency()
         .then((userCurrency) => {
-            // document.querySelectorAll(".sale-price").forEach(async (product) => {
-            //     const productPrice = extractNumber(product.innerHTML);
-            //     product.innerHTML = `${await convertUSD(
-            //         productPrice,
-            //         userCurrency
-            //     )} ${userCurrency}`;
-            // });
-
             const allPriceNodes = [...document.querySelectorAll("*")].filter(
                 (node) =>
                     node.childNodes.length === 1 && // Ensure only one child node

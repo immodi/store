@@ -9,6 +9,7 @@ import RenderIfTrue from "@components/common/RenderIfTrue";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 export function Paypal({
+    grandTotal,
     cartUuid,
     createOrderAPI,
     orderId,
@@ -18,15 +19,7 @@ export function Paypal({
     const [error, setError] = useState("");
     const [order_Id, _setOrder_Id] = useState(orderId);
     const [isOrderPlaced, _setIsOrderdPlaced] = useState(orderPlaced);
-    const [price, _setPrice] = useState(
-        document
-            .querySelector(".grand-total-value")
-            .innerHTML.slice(
-                1,
-                document.querySelector(".grand-total-value").innerHTML.length -
-                    1
-            )
-    );
+    const [price, _setPrice] = useState(grandTotal);
 
     useEffect(() => {
         if (order_Id === undefined) {
@@ -76,14 +69,7 @@ export function Paypal({
                     <PayPalButtons
                         createOrder={async () => {
                             try {
-                                const numberdPrice = price.replace(
-                                    /[^\d.]/g,
-                                    ""
-                                );
-                                const usd = await convertSARtoUSD(numberdPrice);
-                                const orderID = await createOrderPaypal(
-                                    usd.toFixed(2)
-                                );
+                                const orderID = await createOrderPaypal(price);
 
                                 _setOrder_Id(orderID);
                                 return orderID; // Return the order ID to the PayPal SDK
@@ -117,7 +103,11 @@ Paypal.defaultProps = {
     orderId: undefined,
 };
 
-export default function PaypalMethod({ checkout: { cartId }, createOrderAPI }) {
+export default function PaypalMethod({
+    cart: { subTotal, grandTotal },
+    checkout: { cartId },
+    createOrderAPI,
+}) {
     const checkout = useCheckout();
     const { placeOrder } = useCheckoutDispatch();
     const [isLoading, setIsLoading] = useState(false);
@@ -231,6 +221,7 @@ export default function PaypalMethod({ checkout: { cartId }, createOrderAPI }) {
                     <div>
                         {!isLoading ? (
                             <Paypal
+                                grandTotal={grandTotal.value}
                                 cartUuid={cartId}
                                 createOrderAPI={createOrderAPI}
                                 orderPlaced={orderPlaced}
@@ -251,13 +242,16 @@ export default function PaypalMethod({ checkout: { cartId }, createOrderAPI }) {
 
 const createOrderPaypal = async (price) => {
     try {
-        const response = await fetch("http://localhost:3001/create-order", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                price: price,
-            }),
-        });
+        const response = await fetch(
+            "https://paypal.sahlstor.com/create-order",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    price: price,
+                }),
+            }
+        );
 
         const orderData = await response.json();
         if (!orderData.id) {
@@ -529,43 +523,19 @@ function generateRandomString(length = 12) {
     return result;
 }
 
-async function convertSARtoUSD(amountSAR) {
-    try {
-        // Call the API with base SAR and target USD.
-        // If your API doesn't support base SAR, you could instead call:
-        // 'https://hexarate.paikama.co/api/rates/latest/USD?target=SAR'
-        // and then do amountUSD = amountSAR / rate (since 1 USD = rate SAR).
-        const response = await fetch(
-            "https://hexarate.paikama.co/api/rates/latest/SAR?target=USD"
-        );
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        // Assuming the API response has the following structure:
-        // {
-        //   "status_code": 200,
-        //   "data": {
-        //     "base": "SAR",
-        //     "target": "USD",
-        //     "mid": 0.266667, // example rate: 1 SAR = 0.266667 USD
-        //     "unit": 1,
-        //     "timestamp": "2024-08-03T05:16:50.272Z"
-        //   }
-        // }
-
-        const rate = data.data.mid; // conversion rate: 1 SAR = rate USD
-        const amountUSD = amountSAR * rate;
-        return amountUSD;
-    } catch (error) {
-        console.error("Error converting SAR to USD:", error);
-        throw error;
-    }
-}
-
 PaypalMethod.propTypes = {
+    cart: PropTypes.shape({
+        subTotal: PropTypes.shape({
+            value: PropTypes.number,
+            text: PropTypes.string,
+        }),
+
+        grandTotal: PropTypes.shape({
+            value: PropTypes.number,
+            text: PropTypes.string,
+        }),
+    }).isRequired,
+
     checkout: PropTypes.shape({
         cartId: PropTypes.string.isRequired,
     }).isRequired,
@@ -579,8 +549,18 @@ export const layout = {
 
 export const query = `
   query Query {
+    cart {
+        subTotal {
+            value
+            text
+        }
+        grandTotal {
+            value
+            text
+        }
+    }
     checkout {
-      cartId
+        cartId
     }
     createOrderAPI: url(routeId: "paypalCreateOrder")
   }
