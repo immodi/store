@@ -15,9 +15,25 @@ services:
             DB_SSLMODE: disable
         networks:
             - myevershop
-        depends_on: []
+        depends_on:
+            - database
         ports:
             - 3000:3000
+
+        #The postgres database:
+        database:
+            image: postgres:16
+            restart: unless-stopped
+            volumes:
+                - postgres-data:/var/lib/postgresql/data
+            environment:
+                POSTGRES_PASSWORD: postgres
+                POSTGRES_USER: postgres
+                POSTGRES_DB: postgres
+            ports:
+                - "5432:5432"
+            networks:
+                - myevershop
 
 networks:
     myevershop:

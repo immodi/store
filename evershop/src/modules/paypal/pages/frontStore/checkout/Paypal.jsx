@@ -427,7 +427,7 @@ async function createOrder(adminToken, cartId) {
 
 async function manualCreateOrder(cartId) {
     try {
-        const adminToken = await getAdminToken("admin@admin.com", "_");
+        const adminToken = await getAdminToken("admin@admin.com", "modimodi");
         const address = JSON.parse(localStorage.getItem("shippingAddress"));
         console.log(address);
 
